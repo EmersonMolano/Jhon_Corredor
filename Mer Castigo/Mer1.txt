@@ -1,0 +1,220 @@
+-- TURNO
+CREATE TABLE Turno (
+    id_turno INT PRIMARY KEY AUTO_INCREMENT,
+    horario VARCHAR(20)
+);
+
+-- GRUPO
+CREATE TABLE Grupo (
+    id_grupo INT PRIMARY KEY AUTO_INCREMENT,
+    nombre_grupo VARCHAR(50),
+    id_turno INT,
+    FOREIGN KEY (id_turno) REFERENCES Turno(id_turno)
+);
+
+-- MONITOR
+CREATE TABLE Monitor (
+    id_monitor INT PRIMARY KEY AUTO_INCREMENT,
+    nombre VARCHAR(100),
+    especialidad VARCHAR(50)
+);
+
+-- CAMPISTA
+CREATE TABLE Campista (
+    id_campista INT PRIMARY KEY AUTO_INCREMENT,
+    nombre VARCHAR(100),
+    edad INT,
+    id_grupo INT,
+    FOREIGN KEY (id_grupo) REFERENCES Grupo(id_grupo)
+);
+
+-- ACTIVIDAD
+CREATE TABLE Actividad (
+    id_actividad INT PRIMARY KEY AUTO_INCREMENT,
+    nombre_actividad VARCHAR(100),
+    dificultad VARCHAR(20),
+    id_monitor INT,
+    FOREIGN KEY (id_monitor) REFERENCES Monitor(id_monitor)
+);
+
+-- EQUIPO
+CREATE TABLE Equipo (
+    id_equipo INT PRIMARY KEY AUTO_INCREMENT,
+    nombre_equipo VARCHAR(50),
+    cantidad INT
+);
+
+-- MATERIAL
+CREATE TABLE Material (
+    id_material INT PRIMARY KEY AUTO_INCREMENT,
+    nombre_material VARCHAR(50),
+    tipo VARCHAR(30)
+);
+
+-- PIVOTE: CAMPISTA - ACTIVIDAD
+CREATE TABLE CampistaActividad (
+    id_campista INT,
+    id_actividad INT,
+    PRIMARY KEY (id_campista, id_actividad),
+    FOREIGN KEY (id_campista) REFERENCES Campista(id_campista),
+    FOREIGN KEY (id_actividad) REFERENCES Actividad(id_actividad)
+);
+
+-- PIVOTE: ACTIVIDAD - MATERIAL
+CREATE TABLE ActividadMaterial (
+    id_actividad INT,
+    id_material INT,
+    PRIMARY KEY (id_actividad, id_material),
+    FOREIGN KEY (id_actividad) REFERENCES Actividad(id_actividad),
+    FOREIGN KEY (id_material) REFERENCES Material(id_material)
+);
+
+-- TURNO
+INSERT INTO Turno (horario) VALUES 
+('Mañana'), ('Tarde'), ('Noche'), ('Madrugada');
+
+-- GRUPO (usa FK de Turno)
+INSERT INTO Grupo (nombre_grupo, id_turno) VALUES 
+('Exploradores', 1),
+('Escaladores', 2),
+('Rastreadores', 3),
+('Aventureros', 1);
+
+-- MONITOR
+INSERT INTO Monitor (nombre, especialidad) VALUES 
+('Laura Castillo', 'Escalada'),
+('Mateo Vargas', 'Orientación'),
+('Diana Ríos', 'Supervivencia'),
+('Jorge Gómez', 'Primeros Auxilios');
+
+-- CAMPISTA (usa FK de Grupo)
+INSERT INTO Campista (nombre, edad, id_grupo) VALUES 
+('Ana Martínez', 13, 1),
+('Carlos Peña', 14, 2),
+('Lucía Torres', 12, 1),
+('Emilio Pardo', 15, 3);
+
+-- ACTIVIDAD (usa FK de Monitor)
+INSERT INTO Actividad (nombre_actividad, dificultad, id_monitor) VALUES 
+('Escalada de roca', 'Alta', 1),
+('Búsqueda con brújula', 'Media', 2),
+('Construcción de refugio', 'Alta', 3),
+('Atención de heridas', 'Baja', 4);
+
+-- EQUIPO
+INSERT INTO Equipo (nombre_equipo, cantidad) VALUES 
+('Kit primeros auxilios', 10),
+('Cuerdas de escalada', 15),
+('Linternas LED', 20),
+('Brújulas', 12);
+
+-- MATERIAL
+INSERT INTO Material (nombre_material, tipo) VALUES 
+('Brújula', 'Instrumento'),
+('Venda', 'Médico'),
+('Piedras grandes', 'Natural'),
+('Cuerda', 'Herramienta');
+
+-- PIVOTE: CAMPISTA - ACTIVIDAD
+INSERT INTO CampistaActividad (id_campista, id_actividad) VALUES 
+(1, 1), (2, 2), (3, 3), (4, 4);
+
+-- PIVOTE: ACTIVIDAD - MATERIAL
+INSERT INTO ActividadMaterial (id_actividad, id_material) VALUES 
+(1, 4), (2, 1), (3, 3), (4, 2);
+
+-- 1. Ver todos los campistas con su grupo
+SELECT c.nombre, g.nombre_grupo
+FROM Campista c
+JOIN Grupo g ON c.id_grupo = g.id_grupo;
+
+-- 2. Ver actividades con su monitor asignado
+SELECT a.nombre_actividad, m.nombre AS monitor
+FROM Actividad a
+JOIN Monitor m ON a.id_monitor = m.id_monitor;
+
+-- 3. Mostrar materiales usados en actividades de dificultad 'Alta'
+SELECT a.nombre_actividad, m.nombre_material
+FROM Actividad a
+JOIN ActividadMaterial am ON a.id_actividad = am.id_actividad
+JOIN Material m ON am.id_material = m.id_material
+WHERE a.dificultad = 'Alta';
+
+-- 1. Eliminar un monitor específico
+DELETE FROM Monitor
+WHERE id_monitor = 4;
+
+-- 2. Eliminar un material que no se use (asegúrate primero)
+DELETE FROM Material
+WHERE id_material = 4;
+
+-- 3. Eliminar un grupo si ya no tiene campistas
+DELETE FROM Grupo
+WHERE id_grupo = 4;
+
+-- 1. Cambiar el turno de un grupo
+UPDATE Grupo
+SET id_turno = 3
+WHERE id_grupo = 2;
+
+-- 2. Actualizar la especialidad de un monitor
+UPDATE Monitor
+SET especialidad = 'Técnicas de campamento'
+WHERE id_monitor = 2;
+
+-- 3. Cambiar nombre de una actividad
+UPDATE Actividad
+SET nombre_actividad = 'Refugio de emergencia'
+WHERE id_actividad = 3;
+
+-- 1. Agregar campo "sexo" a Campista
+ALTER TABLE Campista ADD sexo CHAR(1);
+
+-- 2. Cambiar nombre del campo "especialidad" en Monitor
+ALTER TABLE Monitor CHANGE especialidad especialidad_area VARCHAR(100);
+
+-- 3. Modificar longitud del nombre de grupo
+ALTER TABLE Grupo MODIFY nombre_grupo VARCHAR(100);
+
+-- 1. Vaciar actividades sin borrar la tabla
+TRUNCATE TABLE Actividad;
+
+-- 2. Vaciar campistas-actividad
+TRUNCATE TABLE CampistaActividad;
+
+-- 3. Vaciar materiales de actividades
+TRUNCATE TABLE ActividadMaterial;
+
+SELECT nombre 
+FROM Campista 
+WHERE id_grupo IN (
+  SELECT id_grupo 
+  FROM Campista 
+  GROUP BY id_grupo 
+  HAVING COUNT(*) = (
+    SELECT MAX(cantidad) 
+    FROM (
+      SELECT COUNT(*) AS cantidad 
+      FROM Campista 
+      GROUP BY id_grupo
+    ) AS subconsulta
+  )
+);
+
+SELECT nombre_material 
+FROM Material m
+WHERE EXISTS (
+  SELECT 1 
+  FROM ActividadMaterial am 
+  WHERE am.id_material = m.id_material
+);
+
+SELECT t.horario, COUNT(c.id_campista) AS total_campistas
+FROM Turno t
+JOIN Grupo g ON t.id_turno = g.id_turno
+JOIN (
+  SELECT id_grupo, id_campista
+  FROM Campista
+) AS c ON g.id_grupo = c.id_grupo
+GROUP BY t.horario;
+
